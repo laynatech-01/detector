@@ -1,5 +1,5 @@
 // --- CONFIGURACIÓN INICIAL DEL ROBOT ---
-const VERSION_ROBOT = "9"; 
+const VERSION_ROBOT = "9.1"; 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('outputCanvas');
 const ctx = canvas.getContext('2d');
@@ -136,4 +136,5 @@ async function predict() {
     } catch (e) {
         statusElem.textContent = "Fallo de sistema.";
     }
+
 })();
