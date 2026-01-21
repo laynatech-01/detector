@@ -1,5 +1,5 @@
 // --- CONFIGURACIÓN DE VERSIÓN ---
-const VERSION_ROBOT = "5B-YOLO";
+const VERSION_ROBOT = "05-C";
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('outputCanvas');
@@ -150,4 +150,5 @@ async function predict() {
 })();
 
 startButton.onclick = start;
+
 stopButton.onclick = stop;
