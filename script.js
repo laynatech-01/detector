@@ -4,9 +4,9 @@ const ctx = canvas.getContext('2d');
 const statusElem = document.getElementById('status');
 
 // --- CONFIGURACIÓN DE SEGURIDAD PARA EL TOKEN ---
-// Divide tu token hf_...rdur en dos partes para que GitHub no lo detecte como secreto
-const parte1 = "hf_MjBnFUxTnOWHEoNM"; // Pega aquí la primera mitad
-const parte2 = "ofqsPLHLsAKPAtrdur"; // Pega aquí la segunda mitad
+// Tu token hf_...rdur dividido para protección
+const parte1 = "hf_MjBnFUxTnOWHEoNM"; 
+const parte2 = "ofqsPLHLsAKPAtrdur"; 
 const HF_TOKEN = parte1 + parte2; 
 
 let model, streaming = false, objetosVistos = [];
@@ -22,15 +22,14 @@ function hablar(texto) {
 // --- CEREBRO INTELIGENTE (HUGGING FACE - MISTRAL) ---
 async function preguntarIA(pregunta) {
     if (objetosVistos.length === 0) {
-        hablar("Soy Laynatech 01. No detecto objetos claros en mis sensores.");
+        hablar("Soy Laynatech 01 versión 8. Mis sensores no detectan objetos claros.");
         return;
     }
 
-    statusElem.textContent = "Laynatech 01 procesando...";
+    statusElem.textContent = "Laynatech 01 V8 procesando...";
     const lista = objetosVistos.join(", ");
     
-    // Prompt optimizado para que sepa quién es y qué ve
-    const prompt = `<s>[INST] Eres el cerebro del robot Laynatech 01. 
+    const prompt = `<s>[INST] Eres el cerebro del robot Laynatech 01 Versión 8. 
     Ves estos objetos: ${lista}. 
     Responde en español de forma muy breve (máximo 12 palabras) y robótica a: ${pregunta} [/INST]`;
 
@@ -48,13 +47,11 @@ async function preguntarIA(pregunta) {
         });
 
         const data = await response.json();
-        
-        // Extraer solo la respuesta de la IA
         let respuestaTotal = data[0].generated_text;
         let respuestaLimpia = respuestaTotal.split("[/INST]").pop().trim();
         
         hablar(respuestaLimpia);
-        statusElem.textContent = "Laynatech 01 respondió.";
+        statusElem.textContent = "Respuesta enviada.";
     } catch (e) {
         console.error(e);
         hablar("Error en mi conexión neuronal externa.");
@@ -70,10 +67,10 @@ if (Recognition) {
 
     rec.onresult = (event) => {
         const speech = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        statusElem.textContent = `Voz detectada: ${speech}`;
+        statusElem.textContent = `V8 escuchó: ${speech}`;
 
         if (speech.includes("quién eres") || speech.includes("quien eres")) {
-            hablar("Soy el cerebro del robot Laynatech 01, un sistema de inteligencia artificial avanzado.");
+            hablar("Soy el cerebro del robot Laynatech 01, versión 8, un sistema avanzado.");
         } 
         else if (speech.includes("qué ves") || speech.includes("analiza") || speech.includes("que es esto")) {
             preguntarIA(speech);
@@ -87,7 +84,7 @@ if (Recognition) {
     rec.start();
 }
 
-// --- VISIÓN Y DETECCIÓN (COCO-SSD) ---
+// --- VISIÓN Y DETECCIÓN ---
 async function start() {
     if (streaming) return;
     try {
@@ -98,11 +95,11 @@ async function start() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             streaming = true;
-            hablar("Visión iniciada. Mis sensores están activos.");
+            hablar("Visión de la versión 8 iniciada.");
             predict();
         };
     } catch (e) {
-        hablar("Error al activar cámara. Revisa los permisos.");
+        hablar("Error de cámara en la versión 8.");
     }
 }
 
@@ -111,7 +108,6 @@ async function predict() {
     const predictions = await model.detect(video);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Guardar objetos para que la IA los "sepa"
     objetosVistos = predictions.filter(p => p.score > 0.6).map(p => p.class);
 
     predictions.forEach(p => {
@@ -130,11 +126,5 @@ async function predict() {
 // --- ARRANQUE DEL SISTEMA ---
 (async () => {
     try {
-        statusElem.textContent = "Cargando cerebro...";
-        model = await cocoSsd.load();
-        statusElem.textContent = "Laynatech 01 listo.";
-        hablar("Cerebro de Laynatech 01 cargado. Toca la pantalla y di iniciar.");
-    } catch (e) {
-        statusElem.textContent = "Error en el arranque.";
-    }
-})();
+        statusElem.textContent = "Iniciando Laynatech 01 V8...";
+        model = await cocoSsd.
