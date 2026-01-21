@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaynaTech Robot V11</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <h1>Laynatech detector V11</h1>
+        
+        <div class="video-wrapper">
+            <video id="webcam" autoplay muted playsinline></video>
+            <canvas id="outputCanvas"></canvas>
+            <div id="voice-indicator" class="hidden">🎤 Escuchando...</div>
+        </div>
+
+        <div class="ui-panel">
+            <div class="search-box">
+                <label>Objetivo:</label>
+                <input type="text" id="inputText" placeholder="Di 'Qué ves'...">
+            </div>
+
+            <div class="button-grid">
+                <button id="startButton" class="btn-start" onclick="start()">Iniciar Cámara</button>
+            </div>
+            
+            <p id="status">Cargando sistema V11...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="script.js"></script>
+</body>
+</html>
