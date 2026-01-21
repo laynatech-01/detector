@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 const statusElem = document.getElementById('status');
 
 // --- PEGA AQUÍ TU CLAVE DE LA IMAGEN ---
-const GEMINI_API_KEY = "PEGA_AQUÍ_TU_LLAVE_COPIADA"; 
+const GEMINI_API_KEY = "gen-lang-client-0627825551"; 
 
 let model, streaming = false, objetosVistos = [];
 
