@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaynaTech Robot v08</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <h1>IA Vision Control</h1>
+        
+        <div class="video-wrapper">
+            <video id="webcam" autoplay muted playsinline></video>
+            <canvas id="outputCanvas"></canvas>
+            <div id="voice-indicator" class="hidden">🎤 Escuchando...</div>
+        </div>
+
+        <div class="ui-panel">
+            <div class="search-box">
+                <label>Objetivo:</label>
+                <input type="text" id="inputText" placeholder="Di 'Detectar silla'...">
+            </div>
+
+            <div class="button-grid">
+                <button id="startButton" class="btn-start">Iniciar Cámara</button>
+                <button id="stopButton" class="btn-stop" disabled>Detener</button>
+            </div>
+            
+            <p id="status">Cargando sistema...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="script.js"></script>
+</body>
+</html>
