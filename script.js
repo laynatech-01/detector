@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 const statusElem = document.getElementById('status');
 
 // --- REEMPLAZA ESTO CON TU CLAVE REAL DE GOOGLE AI STUDIO (EMPIEZA CON AIza) ---
-const GEMINI_API_KEY = "AIzaSyAxeB5MfAo_4vRWHdBuUpcjZI7dOJRPcIQ"; 
+const GEMINI_API_KEY = "AIzaSyCXMm3O7qFoTmiugBfdu3J6QStoIOwrEyE"; 
 
 let model, streaming = false, objetosVistos = [];
 
