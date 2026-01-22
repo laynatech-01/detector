@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaynaTech V5-L - Control Total</title>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: white; display: flex; justify-content: center; }
+        .main-container { width: 100%; max-width: 500px; padding: 20px; text-align: center; }
+        .video-wrapper { position: relative; width: 100%; border-radius: 15px; overflow: hidden; border: 2px solid #00ff00; box-shadow: 0 0 15px rgba(0,255,0,0.3); }
+        video { width: 100%; display: block; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        
+        .ui-panel { background: #1a1a1a; margin-top: 15px; padding: 15px; border-radius: 15px; border: 1px solid #333; }
+        .button-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        
+        button { padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.85rem; }
+        .btn-main { background: #00ff00; color: #000; }
+        .btn-stop { background: #441111; color: #ff8888; }
+        
+        /* Estilos de estados de modo */
+        .btn-mode { background: #333; color: #888; border: 1px solid #444; }
+        .active-desc { background: #0088ff !important; color: white !important; box-shadow: 0 0 10px #0088ff; }
+        .active-simple { background: #00ff00 !important; color: black !important; box-shadow: 0 0 10px #00ff00; }
+
+        .console-box { margin-top: 10px; text-align: left; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #00ff00; color: #00ff00; border-radius: 8px; font-family: monospace; box-sizing: border-box; }
+        #status { font-size: 0.75rem; color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <h1>LAYNATECH V5-L</h1>
+        <div class="video-wrapper">
+            <video id="webcam" autoplay muted playsinline></video>
+            <canvas id="outputCanvas"></canvas>
+        </div>
+        
+        <div class="ui-panel">
+            <div class="button-grid">
+                <button id="startButton" class="btn-main">INICIAR IA</button>
+                <button id="stopButton" class="btn-stop" disabled>DETENER</button>
+            </div>
+
+            <div class="button-grid">
+                <button id="btnDescribir" class="btn-mode">MODO DESCRIPCIÓN</button>
+                <button id="btnNoDescribir" class="btn-mode active-simple">MODO SIMPLE</button>
+            </div>
+
+            <div class="console-box">
+                <input type="text" id="inputText" readonly placeholder="Voz convertida a texto aquí...">
+            </div>
+            <p id="status">Esperando inicio...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script> 
+    <script src="script.js"></script>
+</body>
+</html>
