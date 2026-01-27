@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+fetch("https://hf-api.eligiolayna01.workers.dev", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message: "que dia es hoy?" })
+})
+.then(r => r.json())
+.then(console.log);
+</script>
+</body>
+</html>
