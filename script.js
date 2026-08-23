@@ -12,11 +12,15 @@ let model, streaming = false, localStream = null;
 let objetosYaAnunciados = new Set();
 let modoDescripcion = true; 
 
-// Estado para la autenticación por voz
+// Estado para autenticación por voz
 let esperandoUsuarioVoz = false;
 const USUARIO_CLAVE = "tango";
 
-// Variables para el puente de audio del manos libres
+// Control de prioridad del micrófono
+let usuarioHablando = false;
+let timeoutHablando = null;
+
+// Variables para puente de audio del manos libres
 let audioContext = null;
 let micSource = null;
 
@@ -57,6 +61,7 @@ const TRADUCCIONES = {
 };
 
 function sonarPitidoUnSegundo() {
+    if (usuarioHablando) return; // Prioridad al micrófono
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -72,7 +77,10 @@ function sonarPitidoUnSegundo() {
 }
 
 function hablar(texto, urgente = false) {
+    // Si el usuario está hablando, se detiene la voz del sistema y no se anuncia nada
+    if (usuarioHablando && !urgente) return;
     if (!modoDescripcion && !urgente) return;
+
     if (urgente) window.speechSynthesis.cancel();
     inputText.value = texto; 
     const msg = new SpeechSynthesisUtterance(texto);
@@ -90,7 +98,7 @@ function obtenerObjetoEnMano(persona, todasPreds) {
         if (obj.class === "person" || obj.score < 0.3) return false;
         const [ox, oy, ow, oh] = obj.bbox;
         const cX = ox + ow / 2, cY = oy + oh / 2;
-        return (cX > zX && cX < (zX + zW) && cY > zY && cY < (zY + zH));
+        return (cX > zX && cX < (zX + zW) && cY > zY && cY < (zH + zY));
     });
 }
 
@@ -179,7 +187,7 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Reconocimiento de voz continuo y validación por clave de usuario
+// Reconocimiento de voz con prioridad sobre la voz del sistema
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
@@ -188,8 +196,17 @@ if (Recognition) {
     recognition.interimResults = true;
 
     recognition.onresult = (e) => {
-        let textoEnTiempoReal = '';
+        // En cuanto se detecta voz del usuario, se silencia el sistema inmediatamente
+        usuarioHablando = true;
+        window.speechSynthesis.cancel();
 
+        // Reinicia temporizador para liberar la voz del sistema tras hablar
+        clearTimeout(timeoutHablando);
+        timeoutHablando = setTimeout(() => {
+            usuarioHablando = false;
+        }, 1500);
+
+        let textoEnTiempoReal = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
             textoEnTiempoReal += e.results[i][0].transcript;
         }
@@ -200,10 +217,11 @@ if (Recognition) {
 
         const cmd = textoEnTiempoReal.toLowerCase();
 
-        // Si se encuentra en proceso de autenticación por usuario
+        // Evaluación durante solicitud de clave por voz
         if (esperandoUsuarioVoz) {
             if (cmd.includes(USUARIO_CLAVE)) {
                 esperandoUsuarioVoz = false;
+                usuarioHablando = false;
                 ejecutarArranqueSistema();
             } else if (textoEnTiempoReal.length > 8 && !cmd.includes("por favor dicte")) {
                 hablar("Usuario no reconocido, intente nuevamente", true);
@@ -212,11 +230,11 @@ if (Recognition) {
             return;
         }
 
-        // Comandos normales del sistema
-        if (cmd.includes("fx1 activar sistema")) solicitarUsuarioVoz();
-        if (cmd.includes("fx1 desactivar sistema")) detenerSistema();
-        if (cmd.includes("fx1 describir")) activarDescripcion();
-        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
+        // Comandos de control estándar
+        if (cmd.includes("activar sistema")) solicitarUsuarioVoz();
+        if (cmd.includes("desactivar sistema")) detenerSistema();
+        if (cmd.includes("describir")) activarDescripcion();
+        if (cmd.includes("no describir")) desactivarDescripcion();
     };
 
     recognition.onend = () => {
@@ -254,7 +272,7 @@ async function ejecutarArranqueSistema() {
         video.play();
         streaming = true;
         startButton.disabled = true; stopButton.disabled = false;
-        hablar("Vision FX1 activado", true);
+        hablar("soy el sistema de vision por computadora creado para la chamarra FX1 exclusiva para socios", true);
         video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; predict(); };
     } catch (e) {
         alert("Error al iniciar cámara o micrófono: " + e.message);
