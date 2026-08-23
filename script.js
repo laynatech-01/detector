@@ -12,11 +12,15 @@ let model, streaming = false, localStream = null;
 let objetosYaAnunciados = new Set();
 let modoDescripcion = true; 
 
+// Estado para el flujo de autenticación por voz
+let esperandoPinVoz = false;
+const PIN_CORRECTO = "1234";
+
 // Variables para el puente de audio del manos libres
 let audioContext = null;
 let micSource = null;
 
-// Variables de Control originales
+// Variables de Control
 let manosOcupadas = false;
 let ultimoMomentoConObjeto = 0;
 let lastBeepTime = 0;
@@ -28,7 +32,6 @@ let tiempoInicioEstabilidad = 0;
 
 const ALTURAS_REALES = { "person": 1.7, "chair": 0.9, "cell phone": 0.15, "bottle": 0.25, "knife": 0.20 };
 
-// Diccionario de traducciones completo
 const TRADUCCIONES = {
     "person": "persona", "bicycle": "bicicleta", "car": "carro", "motorcycle": "moto",
     "airplane": "avión", "bus": "bus", "train": "tren", "truck": "camión", "boat": "barco",
@@ -176,13 +179,29 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Comandos de voz y transcripción en tiempo real
+// Convierte números hablados en formato texto a sus dígitos correspondientes
+function normalizarNumeros(texto) {
+    return texto
+        .replace(/cero/g, "0")
+        .replace(/uno|una/g, "1")
+        .replace(/dos/g, "2")
+        .replace(/tres/g, "3")
+        .replace(/cuatro/g, "4")
+        .replace(/cinco/g, "5")
+        .replace(/seis/g, "6")
+        .replace(/siete/g, "7")
+        .replace(/ocho/g, "8")
+        .replace(/nueve/g, "9")
+        .replace(/\s+/g, "");
+}
+
+// Reconocimiento de voz continuo
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
     recognition.lang = 'es-ES';
     recognition.continuous = true;
-    recognition.interimResults = true; // Permite capturar lo que hablas inmediatamente
+    recognition.interimResults = true;
 
     recognition.onresult = (e) => {
         let textoEnTiempoReal = '';
@@ -191,20 +210,32 @@ if (Recognition) {
             textoEnTiempoReal += e.results[i][0].transcript;
         }
 
-        // Muestra lo que hablas en el recuadro de texto
         if (inputText) {
             inputText.value = textoEnTiempoReal;
         }
 
-        // Procesa comandos sobre el texto capturado
         const cmd = textoEnTiempoReal.toLowerCase();
-        if (cmd.includes("fx1 activar sistema")) iniciarSistema();
-        if (cmd.includes("fx1 desactivar sistema")) detenerSistema();
-        if (cmd.includes("fx1 describir")) activarDescripcion();
-        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
+
+        // Si el sistema está esperando la clave por voz
+        if (esperandoPinVoz) {
+            const digitosProcesados = normalizarNumeros(cmd);
+            if (digitosProcesados.includes(PIN_CORRECTO)) {
+                esperandoPinVoz = false;
+                ejecutarArranqueSistema();
+            } else if (digitosProcesados.length >= 4) {
+                hablar("PIN incorrecto, intente de nuevo", true);
+                if (inputText) inputText.value = "";
+            }
+            return;
+        }
+
+        // Evaluación de comandos estándar
+        if (cmd.includes("activar sistema")) solicitarPinVoz();
+        if (cmd.includes("desactivar sistema")) detenerSistema();
+        if (cmd.includes("describir")) activarDescripcion();
+        if (cmd.includes("no describir")) desactivarDescripcion();
     };
 
-    // Reinicia automáticamente la escucha si el sistema la interrumpe
     recognition.onend = () => {
         try { recognition.start(); } catch(e) {}
     };
@@ -212,45 +243,44 @@ if (Recognition) {
     recognition.start();
 }
 
-async function iniciarSistema() {
-    const pin = prompt("Visión FX1 v30 - Ingrese PIN:");
-    if (pin === "1234") {
-        try {
-            // Solicita explícitamente cámara y micrófono para activar canal de manos libres (SCO)
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" },
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
+function solicitarPinVoz() {
+    if (streaming) return;
+    esperandoPinVoz = true;
+    hablar("Por favor dicte su PIN de cuatro dígitos", true);
+}
 
-            // Puente Web Audio API silencioso para mantener vivo el micrófono Bluetooth
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            micSource = audioContext.createMediaStreamSource(localStream);
-            const gainNode = audioContext.createGain();
-            gainNode.gain.value = 0; // Silencioso para evitar acoples
-            micSource.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+async function ejecutarArranqueSistema() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" },
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
 
-            video.srcObject = localStream;
-            video.play();
-            streaming = true;
-            startButton.disabled = true; stopButton.disabled = false;
-            hablar("Vision FX1 sistema activo", true);
-            video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; predict(); };
-        } catch (e) {
-            alert("Error al iniciar cámara o micrófono: " + e.message);
-        }
-    } else {
-        alert("PIN incorrecto");
-	hablar("PIN incorrecto", true);
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        micSource = audioContext.createMediaStreamSource(localStream);
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = 0; 
+        micSource.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        video.srcObject = localStream;
+        video.play();
+        streaming = true;
+        startButton.disabled = true; stopButton.disabled = false;
+        hablar("soy el sistema de vision por computadora creado para la chamarra FX1 exclusiva para socios", true);
+        video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; predict(); };
+    } catch (e) {
+        alert("Error al iniciar cámara o micrófono: " + e.message);
     }
 }
 
 function detenerSistema() {
     streaming = false;
+    esperandoPinVoz = false;
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     if (audioContext) audioContext.close();
     video.srcObject = null;
@@ -261,7 +291,7 @@ function detenerSistema() {
 function activarDescripcion() { modoDescripcion = true; hablar("Descripción activa"); }
 function desactivarDescripcion() { hablar("Descripción desactivada"); setTimeout(() => modoDescripcion = false, 1000); }
 
-startButton.onclick = iniciarSistema;
+startButton.onclick = solicitarPinVoz;
 stopButton.onclick = detenerSistema;
 btnDescribir.onclick = activarDescripcion;
 btnNoDescribir.onclick = desactivarDescripcion;
@@ -271,7 +301,6 @@ btnNoDescribir.onclick = desactivarDescripcion;
         statusElem.textContent = "INICIALIZANDO VISIÓN FX1 v30...";
         model = await cocoSsd.load();
         statusElem.textContent = "SISTEMA v30 LISTO";
-	hablar("sistema cargado", true);
         startButton.disabled = false;
     } catch (e) { statusElem.textContent = "ERROR MOTOR"; }
 })();
