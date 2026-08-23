@@ -170,7 +170,7 @@ if (Recognition) {
 function solicitarUsuarioVoz() {
     if (streaming) return;
     esperandoUsuarioVoz = true;
-    hablar("fx1 sistema cargado, indique su clave de acceso", true);
+    hablar("sistema fx1, indique su clave de acceso", true);
 }
 
 async function ejecutarArranqueSistema() {
@@ -236,5 +236,8 @@ btnNoDescribir.onclick = () => { modoDescripcion = false; hablar("Detección con
         model = await cocoSsd.load();
         statusElem.textContent = "SISTEMA FX1 LISTO";
         startButton.disabled = false;
+        
+        // Ejecución inmediata al cargar la página
+        solicitarUsuarioVoz();
     } catch (e) { statusElem.textContent = "ERROR MOTOR"; }
 })();
