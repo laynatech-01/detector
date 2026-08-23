@@ -172,25 +172,43 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Comandos de voz originales
+// Comandos de voz y transcripción en tiempo real
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
     recognition.lang = 'es-ES';
     recognition.continuous = true;
+    recognition.interimResults = true; // Permite capturar la voz mientras hablas
+
     recognition.onresult = (e) => {
-        const cmd = e.results[e.results.length - 1][0].transcript.toLowerCase();
+        let textoEnTiempoReal = '';
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            textoEnTiempoReal += e.results[i][0].transcript;
+        }
+
+        // Muestra la transcripción en el recuadro de texto
+        if (inputText) {
+            inputText.value = textoEnTiempoReal;
+        }
+
+        // Procesa comandos sobre el texto transcrito
+        const cmd = textoEnTiempoReal.toLowerCase();
         if (cmd.includes("activar sistema")) iniciarSistema();
         if (cmd.includes("desactivar sistema")) detenerSistema();
         if (cmd.includes("describir")) activarDescripcion();
         if (cmd.includes("no describir")) desactivarDescripcion();
     };
+
+    // Reinicia automáticamente el reconocimiento si se detiene
+    recognition.onend = () => recognition.start();
+
     recognition.start();
 }
 
 async function iniciarSistema() {
     const pin = prompt("Visión FX1 v30 - Ingrese PIN:");
-    if (pin === "9632") {
+    if (pin === "1234") {
         localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = localStream;
         video.play();
