@@ -193,7 +193,7 @@ btnNoDescribir.onclick = apagarCamara;
 // 3. SECUENCIA INICIAL DE CARGA
 (async () => {
     try {
-        hablar("iniciando sistema fx1", true);
+        hablar("iniciando sistema fx1 version 2", true);
         statusElem.textContent = "INICIANDO SISTEMA FX1...";
 
         model = await cocoSsd.load();
