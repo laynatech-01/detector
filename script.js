@@ -61,7 +61,7 @@ const TRADUCCIONES = {
 };
 
 function sonarPitidoUnSegundo() {
-    if (usuarioHablando) return; // Prioridad al micrófono
+    if (usuarioHablando) return; 
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -77,7 +77,6 @@ function sonarPitidoUnSegundo() {
 }
 
 function hablar(texto, urgente = false) {
-    // Si el usuario está hablando, se detiene la voz del sistema y no se anuncia nada
     if (usuarioHablando && !urgente) return;
     if (!modoDescripcion && !urgente) return;
 
@@ -187,7 +186,7 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Reconocimiento de voz con prioridad sobre la voz del sistema
+// Reconocimiento de voz continuo
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
@@ -196,11 +195,10 @@ if (Recognition) {
     recognition.interimResults = true;
 
     recognition.onresult = (e) => {
-        // En cuanto se detecta voz del usuario, se silencia el sistema inmediatamente
+        // En cuanto detecta voz, silencia el audio sintetizado del sistema
         usuarioHablando = true;
         window.speechSynthesis.cancel();
 
-        // Reinicia temporizador para liberar la voz del sistema tras hablar
         clearTimeout(timeoutHablando);
         timeoutHablando = setTimeout(() => {
             usuarioHablando = false;
@@ -217,13 +215,13 @@ if (Recognition) {
 
         const cmd = textoEnTiempoReal.toLowerCase();
 
-        // Evaluación durante solicitud de clave por voz
+        // Evaluación del usuario por voz
         if (esperandoUsuarioVoz) {
             if (cmd.includes(USUARIO_CLAVE)) {
                 esperandoUsuarioVoz = false;
                 usuarioHablando = false;
                 ejecutarArranqueSistema();
-            } else if (textoEnTiempoReal.length > 8 && !cmd.includes("por favor dicte")) {
+            } else if (textoEnTiempoReal.length > 8 && !cmd.includes("clave de usuario")) {
                 hablar("Usuario no reconocido, intente nuevamente", true);
                 if (inputText) inputText.value = "";
             }
@@ -231,10 +229,10 @@ if (Recognition) {
         }
 
         // Comandos de control estándar
-        if (cmd.includes("activar sistema")) solicitarUsuarioVoz();
-        if (cmd.includes("desactivar sistema")) detenerSistema();
-        if (cmd.includes("describir")) activarDescripcion();
-        if (cmd.includes("no describir")) desactivarDescripcion();
+        if (cmd.includes("fx1 activar")) solicitarUsuarioVoz();
+        if (cmd.includes("fx1 desactivar")) detenerSistema();
+        if (cmd.includes("fx1 describir")) activarDescripcion();
+        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
     };
 
     recognition.onend = () => {
@@ -247,7 +245,7 @@ if (Recognition) {
 function solicitarUsuarioVoz() {
     if (streaming) return;
     esperandoUsuarioVoz = true;
-    hablar("Por favor dicte el usuario de acceso", true);
+    hablar("sistema fx1 ingrese su clave de usuario", true);
 }
 
 async function ejecutarArranqueSistema() {
