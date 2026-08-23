@@ -12,9 +12,9 @@ let model, streaming = false, localStream = null;
 let objetosYaAnunciados = new Set();
 let modoDescripcion = true; 
 
-// Estado para el flujo de autenticación por voz
-let esperandoPinVoz = false;
-const PIN_CORRECTO = "1234";
+// Estado para la autenticación por voz
+let esperandoUsuarioVoz = false;
+const USUARIO_CLAVE = "tango";
 
 // Variables para el puente de audio del manos libres
 let audioContext = null;
@@ -179,23 +179,7 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Convierte números hablados en formato texto a sus dígitos correspondientes
-function normalizarNumeros(texto) {
-    return texto
-        .replace(/cero/g, "0")
-        .replace(/uno|una/g, "1")
-        .replace(/dos/g, "2")
-        .replace(/tres/g, "3")
-        .replace(/cuatro/g, "4")
-        .replace(/cinco/g, "5")
-        .replace(/seis/g, "6")
-        .replace(/siete/g, "7")
-        .replace(/ocho/g, "8")
-        .replace(/nueve/g, "9")
-        .replace(/\s+/g, "");
-}
-
-// Reconocimiento de voz continuo
+// Reconocimiento de voz continuo y validación por clave de usuario
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
@@ -216,24 +200,23 @@ if (Recognition) {
 
         const cmd = textoEnTiempoReal.toLowerCase();
 
-        // Si el sistema está esperando la clave por voz
-        if (esperandoPinVoz) {
-            const digitosProcesados = normalizarNumeros(cmd);
-            if (digitosProcesados.includes(PIN_CORRECTO)) {
-                esperandoPinVoz = false;
+        // Si se encuentra en proceso de autenticación por usuario
+        if (esperandoUsuarioVoz) {
+            if (cmd.includes(USUARIO_CLAVE)) {
+                esperandoUsuarioVoz = false;
                 ejecutarArranqueSistema();
-            } else if (digitosProcesados.length >= 4) {
-                hablar("PIN incorrecto, intente de nuevo", true);
+            } else if (textoEnTiempoReal.length > 8 && !cmd.includes("por favor dicte")) {
+                hablar("Usuario no reconocido, intente nuevamente", true);
                 if (inputText) inputText.value = "";
             }
             return;
         }
 
-        // Evaluación de comandos estándar
-        if (cmd.includes("activar sistema")) solicitarPinVoz();
-        if (cmd.includes("desactivar sistema")) detenerSistema();
-        if (cmd.includes("describir")) activarDescripcion();
-        if (cmd.includes("no describir")) desactivarDescripcion();
+        // Comandos normales del sistema
+        if (cmd.includes("fx1 activar sistema")) solicitarUsuarioVoz();
+        if (cmd.includes("fx1 desactivar sistema")) detenerSistema();
+        if (cmd.includes("fx1 describir")) activarDescripcion();
+        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
     };
 
     recognition.onend = () => {
@@ -243,10 +226,10 @@ if (Recognition) {
     recognition.start();
 }
 
-function solicitarPinVoz() {
+function solicitarUsuarioVoz() {
     if (streaming) return;
-    esperandoPinVoz = true;
-    hablar("Por favor dicte su PIN de cuatro dígitos", true);
+    esperandoUsuarioVoz = true;
+    hablar("Por favor dicte el usuario de acceso", true);
 }
 
 async function ejecutarArranqueSistema() {
@@ -271,7 +254,7 @@ async function ejecutarArranqueSistema() {
         video.play();
         streaming = true;
         startButton.disabled = true; stopButton.disabled = false;
-        hablar("soy el sistema de vision por computadora creado para la chamarra FX1 exclusiva para socios", true);
+        hablar("Vision FX1 activado", true);
         video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; predict(); };
     } catch (e) {
         alert("Error al iniciar cámara o micrófono: " + e.message);
@@ -280,7 +263,7 @@ async function ejecutarArranqueSistema() {
 
 function detenerSistema() {
     streaming = false;
-    esperandoPinVoz = false;
+    esperandoUsuarioVoz = false;
     if (localStream) localStream.getTracks().forEach(t => t.stop());
     if (audioContext) audioContext.close();
     video.srcObject = null;
@@ -291,7 +274,7 @@ function detenerSistema() {
 function activarDescripcion() { modoDescripcion = true; hablar("Descripción activa"); }
 function desactivarDescripcion() { hablar("Descripción desactivada"); setTimeout(() => modoDescripcion = false, 1000); }
 
-startButton.onclick = solicitarPinVoz;
+startButton.onclick = solicitarUsuarioVoz;
 stopButton.onclick = detenerSistema;
 btnDescribir.onclick = activarDescripcion;
 btnNoDescribir.onclick = desactivarDescripcion;
