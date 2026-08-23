@@ -79,10 +79,10 @@ if (Recognition) {
         }
 
         // Detección bajo demanda
-        if (cmd.includes("fx detectar")) {
+        if (cmd.includes("fx1 detectar")) {
             ejecutarDeteccionPuntual();
             if (inputText) inputText.value = "";
-        } else if (cmd.includes("fx no detectar")) {
+        } else if (cmd.includes("fx1 no detectar")) {
             apagarCamara();
             hablar("Detección desactivada", true);
             if (inputText) inputText.value = "";
