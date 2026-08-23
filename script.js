@@ -9,8 +9,7 @@ const inputText = document.getElementById('inputText');
 const statusElem = document.getElementById('status');
 
 let model, streaming = false, localStream = null;
-let objetosYaAnunciados = new Set();
-let modoDescripcion = false; // Desactivado por defecto para dar prioridad a la escucha
+let modoDescripcion = false; 
 
 // Estado para autenticación por voz
 let esperandoUsuarioVoz = false;
@@ -23,13 +22,6 @@ let timeoutHablando = null;
 // Variables para puente de audio del manos libres
 let audioContext = null;
 let micSource = null;
-
-// Variables de Control
-let manosOcupadas = false;
-let ultimoMomentoConObjeto = 0;
-let lastBeepTime = 0;
-const TIEMPO_ESPERA_RESTABLECER = 10000; 
-const FOCAL_LENGTH = 600;
 
 const TRADUCCIONES = {
     "person": "persona", "bicycle": "bicicleta", "car": "carro", "motorcycle": "moto",
@@ -64,7 +56,7 @@ function hablar(texto, urgente = false) {
     window.speechSynthesis.speak(msg);
 }
 
-// Ejecuta una sola lectura bajo demanda al escuchar "fx detectar"
+// Ejecuta detección puntual, habla el objeto, se pausa y cede prioridad a la escucha
 async function ejecutarDeteccionUnica() {
     if (!streaming || !model) return;
     try {
@@ -73,7 +65,7 @@ async function ejecutarDeteccionUnica() {
         
         const detectados = preds.filter(p => p.score > 0.5);
         if (detectados.length === 0) {
-            hablar("No detecto ningún objeto en este momento", true);
+            hablar("No detecto ningún objeto", true);
             return;
         }
 
@@ -88,12 +80,13 @@ async function ejecutarDeteccionUnica() {
             ctx.fillText(nombreES, p.bbox[0], p.bbox[1] - 5);
         });
 
-        // Elimina duplicados para el anuncio hablado
         const unicos = [...new Set(objetosNombres)];
         const mensaje = unicos.length === 1 
-            ? `Detecto: ${unicos[0]}` 
-            : `Detecto los siguientes objetos: ${unicos.join(", ")}`;
+            ? `Detecto ${unicos[0]}` 
+            : `Detecto ${unicos.join(", ")}`;
 
+        // Detiene cualquier detección activa y prioriza el mensaje + escucha
+        modoDescripcion = false;
         hablar(mensaje, true);
     } catch (e) {
         console.error("Error en detección:", e);
@@ -102,7 +95,6 @@ async function ejecutarDeteccionUnica() {
 
 async function predict() {
     if (!streaming) return;
-    // Bucle pasivo que mantiene el flujo del canvas sin emitir audios automáticos
     if (modoDescripcion) {
         try {
             const preds = await model.detect(video);
@@ -115,11 +107,13 @@ async function predict() {
                 }
             });
         } catch (e) {}
+    } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     requestAnimationFrame(predict);
 }
 
-// Reconocimiento de voz continuo
+// Reconocimiento de voz continuo y escritura en vivo
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (Recognition) {
     const recognition = new Recognition();
@@ -133,14 +127,14 @@ if (Recognition) {
             textoEnTiempoReal += e.results[i][0].transcript;
         }
 
-        // Muestra en pantalla todo lo que el micrófono escucha
+        // Muestra en todo momento lo que escucha en el cuadro de texto
         if (inputText) {
             inputText.value = textoEnTiempoReal;
         }
 
         const cmd = textoEnTiempoReal.toLowerCase().trim();
 
-        // Modo verificación de clave por voz
+        // Modo autenticación por clave
         if (esperandoUsuarioVoz) {
             if (cmd.includes(USUARIO_CLAVE)) {
                 esperandoUsuarioVoz = false;
@@ -149,10 +143,14 @@ if (Recognition) {
             return;
         }
 
-        // Reconocimiento de comandos
+        // Comandos del sistema
         if (cmd.includes("fx detectar")) {
             ejecutarDeteccionUnica();
-            if (inputText) inputText.value = ""; // Limpia la entrada tras ejecutar
+            if (inputText) inputText.value = "";
+        } else if (cmd.includes("fx no detectar")) {
+            modoDescripcion = false;
+            hablar("Detección desactivada", true);
+            if (inputText) inputText.value = "";
         } else if (cmd.includes("fx1 desactivar")) {
             detenerSistema();
         }
@@ -165,12 +163,6 @@ if (Recognition) {
     };
 
     recognition.start();
-}
-
-function solicitarUsuarioVoz() {
-    if (streaming) return;
-    esperandoUsuarioVoz = true;
-    hablar("sistema fx1, indique su clave de acceso", true);
 }
 
 async function ejecutarArranqueSistema() {
@@ -225,19 +217,29 @@ function detenerSistema() {
     hablar("sistema fx1 desactivado", true);
 }
 
-startButton.onclick = solicitarUsuarioVoz;
+function solicitarClaveVoz() {
+    if (streaming) return;
+    esperandoUsuarioVoz = true;
+    hablar("sistema fx1 listo, indique su clave", true);
+}
+
+startButton.onclick = solicitarClaveVoz;
 stopButton.onclick = detenerSistema;
-btnDescribir.onclick = () => { modoDescripcion = true; hablar("Detección continua activa"); };
-btnNoDescribir.onclick = () => { modoDescripcion = false; hablar("Detección continua desactivada"); };
+btnDescribir.onclick = () => { modoDescripcion = true; hablar("Detección activa"); };
+btnNoDescribir.onclick = () => { modoDescripcion = false; hablar("Detección desactivada"); };
 
 (async () => {
     try {
-        statusElem.textContent = "INICIALIZANDO VISIÓN FX1...";
+        // Anuncio 1: Inicio de carga del sistema
+        hablar("iniciando sistema fx1", true);
+        statusElem.textContent = "INICIANDO SISTEMA FX1...";
+        
         model = await cocoSsd.load();
+        
         statusElem.textContent = "SISTEMA FX1 LISTO";
         startButton.disabled = false;
-        
-        // Ejecución inmediata al cargar la página
-        solicitarUsuarioVoz();
+
+        // Anuncio 2: Sistema listo y espera activa de clave "tango"
+        solicitarClaveVoz();
     } catch (e) { statusElem.textContent = "ERROR MOTOR"; }
 })();
