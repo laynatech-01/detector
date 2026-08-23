@@ -16,7 +16,7 @@ let modoDescripcion = true;
 let esperandoUsuarioVoz = false;
 const USUARIO_CLAVE = "tango";
 
-// Control de prioridad del micrófono
+// Control de prioridad del micrófono y escuchas activas
 let usuarioHablando = false;
 let timeoutHablando = null;
 
@@ -81,7 +81,8 @@ function hablar(texto, urgente = false) {
     if (!modoDescripcion && !urgente) return;
 
     if (urgente) window.speechSynthesis.cancel();
-    inputText.value = texto; 
+    if (inputText) inputText.value = texto; 
+    
     const msg = new SpeechSynthesisUtterance(texto);
     msg.lang = 'es-ES';
     msg.rate = urgente ? 1.3 : 1.1;
@@ -167,14 +168,15 @@ async function predict() {
             objetosYaAnunciados.delete("ALERTA_MANOS");
         }
 
+        // Emisión simplificada de objetos detectados con prioridad al micrófono
         if (!manosOcupadas) {
             preds.forEach(p => {
                 if (p.score > 0.5 && p.class !== "person") {
                     if (!objetosYaAnunciados.has(p.class)) {
-                        const d = ((ALTURAS_REALES[p.class] || 0.5) * FOCAL_LENGTH / p.bbox[3]).toFixed(1);
-                        hablar(`${TRADUCCIONES[p.class] || p.class} a ${d} metros`);
+                        // Notifica evento simple y da espacio a la escucha
+                        hablar("Objeto detectado");
                         objetosYaAnunciados.add(p.class);
-                        setTimeout(() => objetosYaAnunciados.delete(p.class), 15000);
+                        setTimeout(() => objetosYaAnunciados.delete(p.class), 12000);
                     }
                     ctx.strokeStyle = "#00ff00";
                     ctx.lineWidth = 1;
@@ -195,7 +197,7 @@ if (Recognition) {
     recognition.interimResults = true;
 
     recognition.onresult = (e) => {
-        // En cuanto detecta voz, silencia el audio sintetizado del sistema
+        // Silencia la voz sintetizada del sistema en cuanto detecta entrada de audio
         usuarioHablando = true;
         window.speechSynthesis.cancel();
 
@@ -215,24 +217,26 @@ if (Recognition) {
 
         const cmd = textoEnTiempoReal.toLowerCase();
 
-        // Evaluación del usuario por voz
+        // Modo verificación de usuario por voz
         if (esperandoUsuarioVoz) {
             if (cmd.includes(USUARIO_CLAVE)) {
                 esperandoUsuarioVoz = false;
                 usuarioHablando = false;
                 ejecutarArranqueSistema();
-            } else if (textoEnTiempoReal.length > 8 && !cmd.includes("clave de usuario")) {
+            } else if (textoEnTiempoReal.length > 8 && !cmd.includes("ingrese clave")) {
                 hablar("Usuario no reconocido, intente nuevamente", true);
                 if (inputText) inputText.value = "";
             }
             return;
         }
 
-        // Comandos de control estándar
-        if (cmd.includes("fx1 activar")) solicitarUsuarioVoz();
-        if (cmd.includes("fx1 desactivar")) detenerSistema();
-        if (cmd.includes("fx1 describir")) activarDescripcion();
-        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
+        // Filtro de comandos activos con el identificador "fx1"
+        if (cmd.includes("fx1")) {
+            if (cmd.includes("activar")) solicitarUsuarioVoz();
+            if (cmd.includes("desactivar")) detenerSistema();
+            if (cmd.includes("describir") && !cmd.includes("no describir")) activarDescripcion();
+            if (cmd.includes("no describir")) desactivarDescripcion();
+        }
     };
 
     recognition.onend = () => {
@@ -245,7 +249,7 @@ if (Recognition) {
 function solicitarUsuarioVoz() {
     if (streaming) return;
     esperandoUsuarioVoz = true;
-    hablar("sistema fx1 ingrese su clave de usuario", true);
+    hablar("sistema fx1 activado, ingrese clave de usuario", true);
 }
 
 async function ejecutarArranqueSistema() {
