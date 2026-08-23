@@ -239,8 +239,11 @@ if (Recognition) {
         }
     };
 
+    // Reinicio controlado con delay para evitar ciclo continuo de conexión/desconexión en el driver
     recognition.onend = () => {
-        try { recognition.start(); } catch(e) {}
+        setTimeout(() => {
+            try { recognition.start(); } catch(e) {}
+        }, 300);
     };
 
     recognition.start();
@@ -263,7 +266,13 @@ async function ejecutarArranqueSistema() {
             }
         });
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Manejo eficiente de AudioContext reutilizando la instancia si ya existe
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } else if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
         micSource = audioContext.createMediaStreamSource(localStream);
         const gainNode = audioContext.createGain();
         gainNode.gain.value = 0; 
@@ -285,7 +294,9 @@ function detenerSistema() {
     streaming = false;
     esperandoUsuarioVoz = false;
     if (localStream) localStream.getTracks().forEach(t => t.stop());
-    if (audioContext) audioContext.close();
+    if (audioContext && audioContext.state !== 'closed') {
+        audioContext.suspend();
+    }
     video.srcObject = null;
     startButton.disabled = false; stopButton.disabled = true;
     hablar("sistema fx1 desactivado", true);
