@@ -274,7 +274,7 @@ async function ejecutarArranqueSistema() {
         video.play();
         streaming = true;
         startButton.disabled = true; stopButton.disabled = false;
-        hablar("soy el sistema de vision por computadora creado para la chamarra FX1 exclusiva para socios", true);
+        hablar("sistema fx1 activado", true);
         video.onloadedmetadata = () => { canvas.width = video.videoWidth; canvas.height = video.videoHeight; predict(); };
     } catch (e) {
         alert("Error al iniciar cámara o micrófono: " + e.message);
@@ -288,7 +288,7 @@ function detenerSistema() {
     if (audioContext) audioContext.close();
     video.srcObject = null;
     startButton.disabled = false; stopButton.disabled = true;
-    hablar("Visión FX1 Apagada", true);
+    hablar("sistema fx1 desactivado", true);
 }
 
 function activarDescripcion() { modoDescripcion = true; hablar("Descripción activa"); }
