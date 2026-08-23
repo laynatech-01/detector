@@ -13,6 +13,12 @@ let streaming = false;
 let localStream = null;
 let esperandoUsuarioVoz = false;
 const USUARIO_CLAVE = "tango";
+const FOCAL_LENGTH = 600;
+
+const ALTURAS_REALES = { 
+    "person": 1.7, "chair": 0.9, "cell phone": 0.15, "bottle": 0.25, 
+    "knife": 0.20, "cup": 0.12, "laptop": 0.25, "book": 0.20 
+};
 
 const TRADUCCIONES = {
     "person": "persona", "bicycle": "bicicleta", "car": "carro", "motorcycle": "moto",
@@ -62,14 +68,12 @@ if (Recognition) {
             textoEnTiempoReal += e.results[i][0].transcript;
         }
 
-        // Muestra en todo momento lo que escucha en el cuadro de texto
         if (inputText && textoEnTiempoReal.trim() !== "") {
             inputText.value = textoEnTiempoReal;
         }
 
         const cmd = textoEnTiempoReal.toLowerCase().trim();
 
-        // Autenticación por clave de acceso
         if (esperandoUsuarioVoz) {
             if (cmd.includes(USUARIO_CLAVE)) {
                 esperandoUsuarioVoz = false;
@@ -78,11 +82,10 @@ if (Recognition) {
             return;
         }
 
-        // Detección bajo demanda
-        if (cmd.includes("fx1 detectar")) {
+        if (cmd.includes("fx detectar")) {
             ejecutarDeteccionPuntual();
             if (inputText) inputText.value = "";
-        } else if (cmd.includes("fx1 no detectar")) {
+        } else if (cmd.includes("fx no detectar")) {
             apagarCamara();
             hablar("Detección desactivada", true);
             if (inputText) inputText.value = "";
@@ -93,7 +96,6 @@ if (Recognition) {
         }
     };
 
-    // Reenganche automático permanente
     recognition.onend = () => {
         setTimeout(() => {
             try { recognition.start(); } catch(e) {}
@@ -103,12 +105,11 @@ if (Recognition) {
     try { recognition.start(); } catch(e) {}
 }
 
-// 2. DETECCIÓN A PETICIÓN (Captura imagen, detecta objeto, habla y apaga)
+// 2. DETECCIÓN A PETICIÓN CON CÁLCULO DE DISTANCIA
 async function ejecutarDeteccionPuntual() {
     if (!model) return;
 
     try {
-        // Enciende la cámara únicamente si no estaba previamente lista
         if (!localStream) {
             localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             video.srcObject = localStream;
@@ -118,7 +119,6 @@ async function ejecutarDeteccionPuntual() {
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
 
-        // Analiza un único frame de video
         const preds = await model.detect(video);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -127,21 +127,25 @@ async function ejecutarDeteccionPuntual() {
         if (detectados.length === 0) {
             hablar("No detecto ningún objeto", true);
         } else {
-            let objetosNombres = [];
+            let descripciones = [];
             detectados.forEach(p => {
                 const nombreES = TRADUCCIONES[p.class] || p.class;
-                objetosNombres.push(nombreES);
+                const alturaReal = ALTURAS_REALES[p.class] || 0.4;
+                const dist = parseFloat(((alturaReal * FOCAL_LENGTH) / p.bbox[3]).toFixed(1));
+
+                descripciones.push(`${nombreES} a ${dist} metros`);
+
                 ctx.strokeStyle = "#00ff00";
                 ctx.lineWidth = 3;
                 ctx.strokeRect(...p.bbox);
                 ctx.fillStyle = "#00ff00";
-                ctx.fillText(nombreES, p.bbox[0], p.bbox[1] - 5);
+                ctx.font = "bold 16px Segoe UI";
+                ctx.fillText(`${nombreES} (${dist}m)`, p.bbox[0], p.bbox[1] - 5);
             });
 
-            const unicos = [...new Set(objetosNombres)];
-            const mensaje = unicos.length === 1 
-                ? `Detecto ${unicos[0]}` 
-                : `Detecto ${unicos.join(", ")}`;
+            const mensaje = descripciones.length === 1 
+                ? `Detecto ${descripciones[0]}` 
+                : `Detecto: ${descripciones.join(", ")}`;
 
             hablar(mensaje, true);
         }
