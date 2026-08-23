@@ -15,10 +15,6 @@ let modoDescripcion = false;
 let esperandoUsuarioVoz = false;
 const USUARIO_CLAVE = "tango";
 
-// Control de prioridad del micrófono y escuchas activas
-let usuarioHablando = false;
-let timeoutHablando = null;
-
 // Variables para puente de audio del manos libres
 let audioContext = null;
 let micSource = null;
@@ -85,7 +81,6 @@ async function ejecutarDeteccionUnica() {
             ? `Detecto ${unicos[0]}` 
             : `Detecto ${unicos.join(", ")}`;
 
-        // Detiene cualquier detección activa y prioriza el mensaje + escucha
         modoDescripcion = false;
         hablar(mensaje, true);
     } catch (e) {
@@ -113,10 +108,12 @@ async function predict() {
     requestAnimationFrame(predict);
 }
 
-// Reconocimiento de voz continuo y escritura en vivo
+// Reconocimiento de voz continuo e ininterrumpido
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+
 if (Recognition) {
-    const recognition = new Recognition();
+    recognition = new Recognition();
     recognition.lang = 'es-ES';
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -127,8 +124,8 @@ if (Recognition) {
             textoEnTiempoReal += e.results[i][0].transcript;
         }
 
-        // Muestra en todo momento lo que escucha en el cuadro de texto
-        if (inputText) {
+        // Escritura permanente en pantalla de todo lo que escucha el micrófono
+        if (inputText && textoEnTiempoReal.trim() !== "") {
             inputText.value = textoEnTiempoReal;
         }
 
@@ -156,13 +153,14 @@ if (Recognition) {
         }
     };
 
+    // Garantiza que la escucha se mantenga activa sin importar peticiones o voces del sistema
     recognition.onend = () => {
         setTimeout(() => {
             try { recognition.start(); } catch(e) {}
-        }, 300);
+        }, 100);
     };
 
-    recognition.start();
+    try { recognition.start(); } catch(e) {}
 }
 
 async function ejecutarArranqueSistema() {
@@ -194,6 +192,12 @@ async function ejecutarArranqueSistema() {
         startButton.disabled = true; stopButton.disabled = false;
         
         hablar("fx1 activado", true);
+
+        // Fuerza la reactivación de la escucha del micrófono inmediatamente después de validar la clave
+        if (recognition) {
+            try { recognition.start(); } catch(e) {}
+        }
+
         video.onloadedmetadata = () => { 
             canvas.width = video.videoWidth; 
             canvas.height = video.videoHeight; 
@@ -230,7 +234,6 @@ btnNoDescribir.onclick = () => { modoDescripcion = false; hablar("Detección des
 
 (async () => {
     try {
-        // Anuncio 1: Inicio de carga del sistema
         hablar("iniciando sistema fx1", true);
         statusElem.textContent = "INICIANDO SISTEMA FX1...";
         
@@ -239,7 +242,6 @@ btnNoDescribir.onclick = () => { modoDescripcion = false; hablar("Detección des
         statusElem.textContent = "SISTEMA FX1 LISTO";
         startButton.disabled = false;
 
-        // Anuncio 2: Sistema listo y espera activa de clave "tango"
         solicitarClaveVoz();
     } catch (e) { statusElem.textContent = "ERROR MOTOR"; }
 })();
