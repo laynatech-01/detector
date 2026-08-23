@@ -198,10 +198,10 @@ if (Recognition) {
 
         // Procesa comandos sobre el texto capturado
         const cmd = textoEnTiempoReal.toLowerCase();
-        if (cmd.includes("activar sistema")) iniciarSistema();
-        if (cmd.includes("desactivar sistema")) detenerSistema();
-        if (cmd.includes("describir")) activarDescripcion();
-        if (cmd.includes("no describir")) desactivarDescripcion();
+        if (cmd.includes("fx1 activar sistema")) iniciarSistema();
+        if (cmd.includes("fx1 desactivar sistema")) detenerSistema();
+        if (cmd.includes("fx1 describir")) activarDescripcion();
+        if (cmd.includes("fx1 no describir")) desactivarDescripcion();
     };
 
     // Reinicia automáticamente la escucha si el sistema la interrumpe
